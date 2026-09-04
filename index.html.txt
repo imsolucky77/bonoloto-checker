@@ -1,0 +1,104 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vérificateur BonoLoto</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
+  <div class="max-w-4xl mx-auto bg-slate-800 rounded-2xl p-6 shadow-xl border border-slate-700">
+    <h1 class="text-3xl font-bold text-center text-amber-400 mb-2">Vérificateur BonoLoto</h1>
+    <p class="text-slate-400 text-center mb-6">Saisissez 6 numéros (1 à 49) pour tester vos grilles sur les derniers tirages.</p>
+
+
+    <div class="flex flex-wrap justify-center gap-2 mb-6">
+      <input type="number" min="1" max="49" class="num-in w-12 h-12 text-center text-lg font-bold bg-slate-700 border border-slate-600 rounded-xl">
+      <input type="number" min="1" max="49" class="num-in w-12 h-12 text-center text-lg font-bold bg-slate-700 border border-slate-600 rounded-xl">
+      <input type="number" min="1" max="49" class="num-in w-12 h-12 text-center text-lg font-bold bg-slate-700 border border-slate-600 rounded-xl">
+      <input type="number" min="1" max="49" class="num-in w-12 h-12 text-center text-lg font-bold bg-slate-700 border border-slate-600 rounded-xl">
+      <input type="number" min="1" max="49" class="num-in w-12 h-12 text-center text-lg font-bold bg-slate-700 border border-slate-600 rounded-xl">
+      <input type="number" min="1" max="49" class="num-in w-12 h-12 text-center text-lg font-bold bg-slate-700 border border-slate-600 rounded-xl">
+    </div>
+
+
+    <div class="text-center mb-6">
+      <button onclick="checkCombination()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-6 py-3 rounded-xl">
+        Vérifier ma combinaison
+      </button>
+    </div>
+
+
+    <div id="results" class="space-y-4"></div>
+  </div>
+
+
+  <script>
+    let drawHistory = [];
+
+
+    // Récupération des données réelles de SELAE
+    async function fetchDraws() {
+      try {
+        const res = await fetch('https://www.loteriasyapuestas.es/servicios/fechasorteos?game_id=BONO');
+        const data = await res.json();
+        drawHistory = data;
+      } catch (err) {
+        console.error("Erreur de chargement des tirages", err);
+      }
+    }
+    fetchDraws();
+
+
+    function checkCombination() {
+      const inputs = Array.from(document.querySelectorAll('.num-in'))
+        .map(i => parseInt(i.value))
+        .filter(n => !isNaN(n) && n >= 1 && n <= 49);
+
+
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+
+      if (inputs.length !== 6 || new Set(inputs).size !== 6) {
+        resultsDiv.innerHTML = '<p class="text-red-400 text-center">Veuillez entrer 6 numéros uniques (1-49).</p>';
+        return;
+      }
+
+
+      if (drawHistory.length === 0) {
+        resultsDiv.innerHTML = '<p class="text-amber-400 text-center">Chargement des tirages en cours... Réessayez dans une seconde.</p>';
+        return;
+      }
+
+
+      let found = 0;
+      drawHistory.forEach(draw => {
+        const winNums = draw.combinacion.split('-').map(n => parseInt(n));
+        const matches = inputs.filter(n => winNums.includes(n));
+        
+        if (matches.length >= 3) {
+          found++;
+          const card = document.createElement('div');
+          card.className = "bg-slate-700/50 p-4 rounded-xl border border-slate-600 flex justify-between items-center";
+          card.innerHTML = `
+            <div>
+              <p class="text-sm text-slate-400">Tirage du ${draw.fecha_sorteo}</p>
+              <p class="font-bold text-amber-400">${matches.length} numéros corrects (${matches.join(', ')})</p>
+            </div>
+            <div class="text-right">
+              <p class="text-slate-300 text-sm">Gagnants 6 N°: ${draw.premio_bote || 'N/A'}</p>
+            </div>
+          `;
+          resultsDiv.appendChild(card);
+        }
+      });
+
+
+      if (found === 0) {
+        resultsDiv.innerHTML = '<p class="text-slate-400 text-center">Aucune combinaison gagnante (≥3 numéros) trouvée sur les récents tirages.</p>';
+      }
+    }
+  </script>
+</body>
+</html>
